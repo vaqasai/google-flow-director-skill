@@ -1,0 +1,22 @@
+Source provenance and licensing status (v0.2)
+
+This release is under the MIT License (v0.1 was PolyForm Noncommercial; copies of v0.1 already distributed keep that licence).
+v0.2 replaced the v0.1 Python package (vaqas_video/). All code in scripts/ and tests/ was written
+fresh for this release; none of the v0.1 driver code remains in the tree.
+
+Open question for the owner BEFORE publishing under MIT (fully open licence makes this matter more): selectors.json lists the names of Google Flow custom
+elements and button labels (for example flow-agent-panel, flow-rich-text-editor, "Start generation").
+Those names were first learned from the v0.1 driver (vaqas_video/driver.py, in git history), which was
+adapted from a local flowdrv.py reference file supplied read-only, with no licence observed and
+redistribution authorization pending source-owner review. DOM element names and ARIA labels are
+facts about Google's page rather than expressive code, but the owner should decide whether that is
+acceptable, or re-derive them from the live page with `flow.py inspect` and replace this file's
+status. No third-party licence is invented or granted here.
+
+The git history of the repository still contains the v0.1 code. If the pending review concludes
+that code must not be distributed, publish from a fresh history rather than this one.
+
+Third-party software used at runtime keeps its own licences: Playwright (Apache-2.0), Pillow (HPND),
+ffmpeg (LGPL/GPL depending on build), Google Chrome / Microsoft Edge (their own terms).
+This skill is not affiliated with or endorsed by Google. Using Flow through browser automation
+is subject to Google's terms of service; the user is responsible for compliance.

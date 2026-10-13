@@ -1,0 +1,24 @@
+{
+  "_note": "Google Flow UI selectors. The UI has no public API and changes over time. If a command says a control was not found, run `flow.py inspect` to list what is on the page, fix the value here (or put an override copy at ~/.flow-director/selectors.json, which wins and survives updates), and retry.",
+  "agent_panel": "flow-agent-panel",
+  "composer": "flow-rich-text-editor [contenteditable=true]",
+  "send_button": "button[aria-label=\"Start generation\"]",
+  "new_session_button": "button[aria-label=\"Start new session\"]",
+  "add_ingredients_button": "button[aria-label=\"Add ingredients to the prompt box\"]",
+  "add_menu_search": "flow-add-menu-popover-content input",
+  "add_menu_item": "flow-add-menu-asset-item",
+  "add_to_prompt_button": "button[aria-label=\"Add to prompt\"]",
+  "ingredient_chip": "flow-ingredient-bar flow-ingredient-chip",
+  "chat_bubble": "flow-chat-bubble",
+  "permission_card": "flow-permission-message",
+  "busy_indicator": "button[aria-label=\"Stop\"], button[aria-label=\"Stop generating\"], mat-spinner",
+  "download_button": "button[aria-label=\"Download\"]",
+  "dialog": "[role=\"dialog\"]",
+  "alerts": "[role=\"alert\"], snack-bar-container",
+  "stop_patterns": {
+    "challenge": "captcha|unusual (activity|traffic)|suspicious",
+    "policy": "violat.*polic|prohibited",
+    "credits": "insufficient credits|out of credits|not enough credits",
+    "capacity": "high demand|at capacity|try again later|failed to generate"
+  }
+}
