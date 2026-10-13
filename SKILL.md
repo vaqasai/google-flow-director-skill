@@ -17,7 +17,7 @@ All commands are `python scripts/flow.py <command>` run from this skill's folder
    Read `items`; for any item not found, do its `fix_if_failed` and re-run. Details per OS: `references/windows.md`.
 2. **Ask the user** (one short message, defaults in brackets): which Flow project (or "I'll open it for you"), which saved Characters (one or several; `flow.py characters` lists them, spelling/case need not match), any scene/location reference images (saved Scenes, or files they will give you to `upload`), format [1080x1920, 10s], captions on/off [on], mode `ask` or `auto` [ask], credit cap [20].
 3. `python scripts/flow.py setup --characters "A,B" --width 1080 --height 1920 --duration 10 --mode ask --max-credits 20` opens a dedicated Chrome window with a persistent profile and prints `next` steps. Re-run `setup` any time to change settings.
-4. **The user signs in to Google in that window** (remote desktop/VNC if the machine is headless) and opens their Flow project. The profile keeps the session, so you never see or store a password. Then run `setup --detect-project` to save the project URL. Never copy cookies out of the profile.
+4. **The user signs in to Google in that window** (on a headless server run `bash scripts/server-display.sh install` then `start`, and follow `references/server.md`: virtual screen, VNC over an SSH tunnel) and opens their Flow project. The profile keeps the session, so you never see or store a password. Then run `setup --detect-project` to save the project URL. Never copy cookies out of the profile.
 5. `python scripts/flow.py doctor` should be all green, and `snapshot` should show `"status": "ready"`.
 
 ## 2. Each video

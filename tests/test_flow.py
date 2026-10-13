@@ -133,6 +133,12 @@ class PermissionAndNameTests(unittest.TestCase):
         self.assertEqual(card["permission"], "")
         self.assertTrue(card["permission_resolved"])
 
+    def test_server_display_env(self):
+        Path(self.tmp.name, "display.env").write_text("DISPLAY=:987\n")
+        self.assertIsNone(self.flow.server_display())          # no such X socket -> ignored
+        with mock.patch.object(self.flow.Path, "exists", return_value=True):
+            self.assertEqual(self.flow.server_display(), ":987")
+
     def test_character_matching(self):
         m = self.flow.match_name
         self.assertEqual(m("mr bear", ["Mr. bear", "Mia"]), ("Mr. bear", "normalized"))

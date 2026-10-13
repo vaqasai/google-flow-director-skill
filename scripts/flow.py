@@ -259,10 +259,23 @@ def cdp_alive(port):
         return False
 
 
+def server_display():
+    """DISPLAY value written by scripts/server-display.sh (virtual screen on a headless server), or None."""
+    try:
+        for line in (HOME / "display.env").read_text(encoding="utf-8").splitlines():
+            if line.startswith("DISPLAY="):
+                value = line.split("=", 1)[1].strip()
+                if Path("/tmp/.X11-unix/X" + value.lstrip(":").split(".")[0]).exists():
+                    return value
+    except OSError:
+        pass
+    return None
+
+
 def has_display():
     if os.name == "nt" or sys.platform == "darwin":
         return True
-    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY") or server_display())
 
 
 def browser_start(cfg, url=None):
@@ -282,12 +295,16 @@ def browser_start(cfg, url=None):
         kwargs["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     else:
         kwargs["start_new_session"] = True
+    if os.name != "nt" and sys.platform != "darwin" and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        shown = server_display()
+        if shown:
+            kwargs["env"] = dict(os.environ, DISPLAY=shown)
     subprocess.Popen(args, **kwargs)
     for _ in range(50):
         if cdp_alive(port):
             out = {"running": True, "started": True, "port": port, "chrome": chrome}
             if not has_display():
-                out["warning"] = "no DISPLAY: the user cannot see or sign in to this window (see references/troubleshooting.md, 'headless')"
+                out["warning"] = "no DISPLAY: the user cannot see or sign in to this window (run scripts/server-display.sh start, see references/server.md)"
             return out
         time.sleep(0.5)
     raise FlowError(f"Chrome did not open debug port {port}",

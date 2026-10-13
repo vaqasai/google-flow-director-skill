@@ -16,6 +16,7 @@
 [What you can do](#-what-you-can-do) •
 [How it works](#-how-it-works) •
 [Install](#-install) •
+[Run on a server](#️-run-it-on-a-server-vps) •
 [Examples](#-things-to-say-to-your-agent) •
 [Cost and safety](#️-cost-and-safety) •
 [FAQ](#-faq)
@@ -101,10 +102,37 @@ It runs the installer for your system:
 | Windows | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\bootstrap.ps1` |
 | Linux / macOS | `bash scripts/bootstrap.sh` |
 
-Then a Chrome window opens. **Sign in to Google there and open your Flow project.** That is the only manual step. On a server with no screen, see the [remote-browser notes](references/troubleshooting.md).
+Then a Chrome window opens. **Sign in to Google there and open your Flow project.** That is the only manual step. On a server with no screen, see [Run it on a server](#️-run-it-on-a-server-vps).
 
 ### 3. Make a video
 > **"Make a 10 second vertical video with Mia in a kitchen, funny, with a caption."**
+
+## ☁️ Run it on a server (VPS)
+
+**You do not need to keep a laptop open.** The skill runs happily on a Linux VPS (Google Cloud, AWS EC2, DigitalOcean, Hetzner, any Ubuntu/Debian box) and can work unattended around the clock:
+
+```
+ your laptop ──ssh tunnel──► VPS ─┬─ virtual screen (Xvfb) ─ real Chrome ─► Google Flow
+   (VNC viewer, once)             ├─ VNC server (localhost only)
+                                  ├─ your agent + this skill
+                                  └─ ffmpeg ─► finished MP4s
+```
+
+- **A real browser, on a screen nobody has to look at.** A virtual display runs a normal, visible Chrome window on the server. A VNC server lets *you* look at it, so you can sign in to Google (and pass any 2-step prompt) yourself.
+- **Sign in once.** After that the saved profile keeps the session. The agent can generate, wait out Flow's queue, download and caption videos with nothing open on your side.
+- **Agent-driven setup.** The agent installs Python, ffmpeg and Chrome (`bootstrap.sh`), then the screen and VNC pieces (`scripts/server-display.sh install` and `start`) and tells you the one command to connect.
+- **Safe by default.** VNC listens on `127.0.0.1` only, with a generated password, reached through an SSH tunnel. The browser's debug port is local too. Never open either to the internet.
+- **Good fits:** a daily reel pipeline, a content agent that makes videos while you sleep, a shared team server, or running the agent from a chat app or scheduler.
+
+```bash
+# on the VPS (your agent does this for you)
+bash scripts/bootstrap.sh
+bash scripts/server-display.sh install && bash scripts/server-display.sh start
+
+# on your own computer, once, to sign in
+ssh -L 5900:localhost:5900 you@your-server-ip     # then open a VNC viewer at localhost:5900
+```
+Full guide, reboot persistence and caveats (Google may ask for extra verification on a datacenter IP): [`references/server.md`](references/server.md).
 
 ## 💬 Things to say to your agent
 
@@ -113,6 +141,7 @@ Then a Chrome window opens. **Sign in to Google there and open your Flow project
 - "Attach Mia and Leo and this kitchen photo, then make a storyboard first. Don't generate until I say yes."
 - "The ending is too fast, redo just the last beat in the same session."
 - "Add captions, strip the audio, and give me the file path."
+- "I'm on a fresh Ubuntu VPS: set up the display and VNC, tell me how to connect, and run everything there."
 - "Stay under 30 credits and don't ask me again unless something blocks you." (auto mode)
 
 ## 🛡️ Cost and safety
@@ -133,8 +162,9 @@ Then a Chrome window opens. **Sign in to Google there and open your Flow project
 | `scripts/flow.py` | Helper commands: `setup`, `doctor`, `browser`, `open`, `snapshot`, `characters`, `attach`, `upload`, `send`, `wait`, `approve`, `download`, `captions`, `credits`, `inspect`, `eval` |
 | `scripts/captions.py` | ffmpeg finishing: resize, caption placement, audio options |
 | `scripts/bootstrap.ps1` / `.sh` | One-command installers for Windows / Linux and macOS |
+| `scripts/server-display.sh` | Virtual screen + VNC for headless servers (VPS, GCP, EC2) |
 | `selectors.json` | Where Flow's buttons are, in one editable file (so a UI change is a small fix) |
-| `references/` | Guides the agent loads on demand: script writing, captions, publishing, Windows, troubleshooting |
+| `references/` | Guides the agent loads on demand: script writing, captions, publishing, Windows, server/VPS, troubleshooting |
 
 Run `python scripts/flow.py --help` for every command. All commands print JSON.
 

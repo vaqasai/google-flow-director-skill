@@ -44,6 +44,14 @@ Attached `flow.py` to the running Flow browser without navigating or sending any
 ## Installer check (2026-10-13, Linux)
 `npx skills add vaqasai/google-flow-director-skill -a claude-code` into an empty folder copied all 16 files including `scripts/` and `references/`. The empty-folder install seen on Windows came from the agent's own installer, not from the `skills` CLI; `doctor --repair` covers it.
 
+## Server display (2026-10-13, Linux)
+| Item | Status |
+|---|---|
+| `server-display.sh start/status/stop`: Xvfb 1440x900, openbox, x11vnc on localhost with password-only auth (RFB security type 2), `display.env`, Chrome opened on that screen by `flow.py browser start` with no DISPLAY set, screenshot, clean stop | TESTED on this machine |
+| Refuses to attach to an existing display or port (a foreign `:101` was found during testing and left untouched) | TESTED |
+| `install` on a fresh VM (apt), systemd user unit, SSH tunnel from a laptop, GCP/EC2 specifics | UNTESTED |
+| Google sign-in from a datacenter IP | UNTESTED, may trigger extra verification |
+
 ## Still UNTESTED
 - Windows re-run of v0.2.1 (all of the above), PowerShell 7, machines without winget, non-admin user.
 - macOS. Linux with a real Flow account (headless VNC sign-in).

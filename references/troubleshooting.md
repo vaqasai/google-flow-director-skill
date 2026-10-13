@@ -24,6 +24,7 @@ Every `flow.py` failure prints `{"ok": false, "error": ..., "hint": ...}`. Start
 | Caption looks wrong | text too long or placement | shorten; adjust `--y`, `--font-size`; see `captions.md` |
 
 ## Headless Linux (no display)
+Use `scripts/server-display.sh` (virtual screen + VNC on localhost); full steps in `references/server.md`. The notes below are the manual version.
 The user must be able to see and use the Chrome window once to sign in.
 - Start a virtual display and expose it: e.g. `Xvfb :1 -screen 0 1440x900x24 &`, `export DISPLAY=:1`, then a VNC server on it (`x11vnc -display :1 -forever -nopw -localhost`, reached through an SSH tunnel; or TigerVNC/noVNC). Only expose it through an authenticated tunnel.
 - Run `flow.py setup`, have the user connect, sign in, open the project. After that the profile keeps the session and the agent can run with the same `DISPLAY`.
