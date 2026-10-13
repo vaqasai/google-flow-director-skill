@@ -19,6 +19,7 @@
     "challenge": "captcha|unusual (activity|traffic)|suspicious",
     "policy": "violat.*polic|prohibited",
     "credits": "insufficient credits|out of credits|not enough credits",
-    "capacity": "high demand|at capacity|try again later|failed to generate"
-  }
+    "capacity": "at capacity|try again later|failed to generate"
+  },
+  "queue_patterns": "high demand|waiting in the queue|queued|in queue"
 }

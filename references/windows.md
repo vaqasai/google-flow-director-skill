@@ -30,3 +30,20 @@ After any install the script refreshes PATH inside its own process, so nothing n
 - **Paths with spaces or non-ASCII characters**: always quote paths. All files are read and written as UTF-8.
 - **Fonts**: captions use `C:\Windows\Fonts\segoeui.ttf` or `arial.ttf` automatically; set `font` in config.json for another one.
 - **Display scaling (125-150%)**: not an issue, clicks are made through the page's DOM, not by screen coordinates.
+
+## Passing text in PowerShell 5.1 / 7
+bash heredocs (`<<'EOF'`) do not exist in PowerShell: `<` is reserved. Use one of these:
+```powershell
+# 1. a here-string piped to stdin (no temp file)
+@"
+Make ONE 10s vertical clip of Mr. bear in the kitchen. "Honey first, manners later."
+"@ | python scripts\flow.py send --file -
+
+# 2. a temp file (any encoding PowerShell writes is fine, a UTF-8 BOM is ignored)
+Set-Content -Path $env:TEMP\msg.txt -Value $text -Encoding utf8
+python scripts\flow.py send --file $env:TEMP\msg.txt
+```
+Short one-liners: use single quotes so `$` and `"` stay literal: `python scripts\flow.py send 'Hello "Mia"'` (double a single quote inside as `''`). The same applies to `captions --text-file`. `python` may be missing from PATH right after install: use `& "$env:USERPROFILE\.flow-director\venv\Scripts\python.exe" scripts\flow.py ...`.
+
+## Install check
+If `scripts\` or `references\` came out empty after `npx skills add`, run `git clone --depth 1 https://github.com/vaqasai/google-flow-director-skill $env:TEMP\fd`, then `Copy-Item -Recurse -Force $env:TEMP\fd\scripts, $env:TEMP\fd\references <skill folder>`; once `flow.py` exists, `flow.py doctor --repair` does the same without git.

@@ -6,7 +6,9 @@ What it does: scales and pads the clip to the configured `format` (letterbox, no
 
 ## Options
 - `--text` or `--text-file` (UTF-8), none = just scale/pad.
-- `--x`, `--y` fractions of the frame (x = centre, y = top of the text block), `--font-size` fraction of height, `--start`/`--end` seconds. Defaults come from `config.json` -> `captions` (`x 0.5, y 0.25, font_size 0.045, max_width 0.86, start 0.3, max_lines 3`).
+- `--x`, `--y` (x = centre fraction, y = top of the text block as a fraction, or `auto`), `--font-size` fraction of height, `--start`/`--end` seconds. Defaults come from `config.json` -> `captions` (`x 0.5, y auto, font_size 0.045, max_width 0.86, start 0.3, max_lines 3`).
+- `y: auto` (default) samples a few frames and puts the caption in the calmest band that looks least like a face (edges + skin-tone share), staying out of the top bar and bottom UI zone. The result shows `caption.y` and `y_auto`. It is a heuristic: look at a frame, and force `--y` when it picks badly. Falls back to 0.32.
+- `--strip-audio` removes the audio track (Flow clips usually have sound even when asked for silence), `--keep-audio` overrides config `strip_audio`. The summary shows `has_audio`.
 - `--trim SECONDS` cuts the output to a length. `--width/--height` override the configured format for this run.
 - `font` in config: any .ttf/.otf path. Default: Segoe UI/Arial (Windows), Helvetica (macOS), fontconfig sans / DejaVu (Linux), else Pillow's built-in font.
 

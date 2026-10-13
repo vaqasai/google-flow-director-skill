@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-DEFAULT_LAYOUT = {"x": 0.5, "y": 0.25, "font_size": 0.045, "max_width": 0.86,
+DEFAULT_LAYOUT = {"x": 0.5, "y": "auto", "font_size": 0.045, "max_width": 0.86,
                   "start": 0.3, "end": None, "max_lines": 3}
 
 
@@ -79,11 +79,59 @@ def render_overlay(text, width, height, layout, font_path, destination):
     bbox = draw.multiline_textbbox((0, 0), rendered, font=font, spacing=spacing, stroke_width=stroke)
     text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
     left = min(max(0, round(width * layout["x"] - text_w / 2)), max(0, width - text_w))
-    top = min(max(0, round(height * layout["y"])), max(0, height - text_h))
+    y = FALLBACK_Y if layout["y"] == "auto" else layout["y"]
+    top = min(max(0, round(height * y)), max(0, height - text_h))
     draw.multiline_text((left - bbox[0], top - bbox[1]), rendered, font=font, fill="white",
                         stroke_width=stroke, stroke_fill="black", spacing=spacing, align="center")
     image.save(destination)
     return {"lines": len(lines), "font_px": size, "bounds": [left, top, left + text_w, top + text_h]}
+
+
+FALLBACK_Y = 0.32
+
+
+def auto_y(source, width, height, block_frac, start, end, base_filter, duration):
+    """Pick the caption's top edge where the picture is calmest and least face/skin-like, so it avoids faces.
+
+    Samples a few frames with ffmpeg, scores horizontal bands (edge density + skin-tone share) and
+    returns (y_fraction, reason). Any problem falls back to FALLBACK_Y. Pillow only, no OpenCV.
+    """
+    try:
+        from PIL import Image, ImageFilter
+        sw, sh = max(24, width // 12), max(24, height // 12)
+        lo, hi = max(0.0, start), min(end if end is not None else duration, duration)
+        times = [lo + (hi - lo) * f for f in (0.1, 0.35, 0.6, 0.9)] if hi > lo else [0.0]
+        frames = []
+        with tempfile.TemporaryDirectory(prefix="flow-auto-y-") as tmp:
+            for i, t in enumerate(times):
+                out = Path(tmp) / f"f{i}.png"
+                subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-y", "-ss", f"{t:.2f}", "-i", str(Path(source).resolve()),
+                                "-frames:v", "1", "-vf", f"{base_filter},scale={sw}:{sh}", str(out)],
+                               capture_output=True, timeout=60)
+                if out.is_file():
+                    frames.append(Image.open(out).convert("RGB"))
+        if not frames:
+            return FALLBACK_Y, "no frames; fallback"
+        rows = max(1, round(block_frac * sh))
+        best = None
+        for y_frac in [x / 100 for x in range(8, 71, 2)]:       # keep clear of the top bar and the bottom UI zone
+            top = round(y_frac * sh)
+            if top + rows > sh:
+                continue
+            score = 0.0
+            for frame in frames:
+                box = frame.crop((0, top, sw, top + rows))
+                edges = box.convert("L").filter(ImageFilter.FIND_EDGES)
+                edge = sum(edges.tobytes()) / (255 * sw * rows)
+                ycc = box.convert("YCbCr").tobytes()
+                skin = sum(1 for i in range(0, len(ycc), 3) if 77 <= ycc[i + 1] <= 127 and 133 <= ycc[i + 2] <= 173) / (sw * rows)
+                score += 2.5 * skin + 2.0 * edge
+            score = score / len(frames) + 0.25 * abs(y_frac - FALLBACK_Y)   # mild pull toward the usual spot
+            if best is None or score < best[0]:
+                best = (score, y_frac)
+        return (best[1], "calmest band") if best else (FALLBACK_Y, "no band fits; fallback")
+    except Exception as error:  # never fail a render over placement
+        return FALLBACK_Y, f"auto failed ({type(error).__name__}); fallback"
 
 
 def probe(video):
@@ -97,7 +145,7 @@ def probe(video):
             "has_audio": any(s["codec_type"] == "audio" for s in info["streams"])}
 
 
-def finish(source, output, width, height, caption=None, layout=None, font=None, trim=None):
+def finish(source, output, width, height, caption=None, layout=None, font=None, trim=None, strip_audio=False):
     """Scale+pad `source` to width x height, optionally burn in `caption`, write `output` (mp4)."""
     source, output = Path(source), Path(output)
     if not source.is_file():
@@ -113,8 +161,18 @@ def finish(source, output, width, height, caption=None, layout=None, font=None, 
         extra_in, graph, mapping = [], ["-vf", base], "0:v:0"
         if caption:
             layout = {**DEFAULT_LAYOUT, **(layout or {})}
-            info = render_overlay(caption, width, height, layout, find_font(font), tmp / "caption.png")
             seconds = probe(source)["duration"]
+            if layout["y"] == "auto":
+                probe_info = render_overlay(caption, width, height, {**layout, "y": 0.0}, find_font(font), tmp / "probe.png")
+                block = (probe_info["bounds"][3] - probe_info["bounds"][1]) / height
+                chosen, why = auto_y(source, width, height, block, layout["start"], layout["end"] or trim or seconds, base, seconds)
+                layout = {**layout, "y": chosen}
+            else:
+                why = None
+            info = render_overlay(caption, width, height, layout, find_font(font), tmp / "caption.png")
+            info["y"] = layout["y"]
+            if why:
+                info["y_auto"] = why
             end = layout["end"] if layout["end"] is not None else (trim or seconds)
             extra_in = ["-i", "caption.png"]
             graph = ["-filter_complex",
@@ -124,10 +182,10 @@ def finish(source, output, width, height, caption=None, layout=None, font=None, 
         if trim:
             cmd += ["-t", str(trim)]
         result = tmp / "result.mp4"
-        cmd += ["-map", mapping, "-map", "0:a?", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
-                "-movflags", "+faststart", str(result)]
+        cmd += ["-map", mapping, *([] if strip_audio else ["-map", "0:a?"]), "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                *(["-an"] if strip_audio else ["-c:a", "aac"]), "-movflags", "+faststart", str(result)]
         done = subprocess.run(cmd, cwd=tmp, capture_output=True, text=True, timeout=600)
         if done.returncode != 0:
             raise RuntimeError("ffmpeg failed: " + done.stderr.strip()[-600:])
         shutil.move(str(result), str(output))
-    return {"output": str(output), "caption": info or None, **probe(output)}
+    return {"output": str(output), "caption": info or None, "audio_stripped": bool(strip_audio), **probe(output)}

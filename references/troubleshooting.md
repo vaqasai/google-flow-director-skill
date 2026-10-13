@@ -12,9 +12,13 @@ Every `flow.py` failure prints `{"ok": false, "error": ..., "hint": ...}`. Start
 | `control not found: <selector>` | Flow UI changed | `inspect --filter <word>` to find the real element, put the new selector in `~/.flow-director/selectors.json`, retry |
 | `composer text differs from the message` | rich editor ate characters | retry `send --slow`; very long messages: split them |
 | `message may not have been sent` | slow page or UI change | `snapshot` to see the chat; only re-send if the text is not in `chat` (avoid double spend) |
-| `attach`: `expected exactly one Character tile` | name differs from the saved name, or duplicates | check the exact name in Flow (case, spaces); `inspect` while the add menu is open |
+| `attach`: `no unique Character matches` | name unlike any saved Character, or two are equally close | `flow.py characters` lists the saved names; `attach` already ignores case/punctuation (`mr bear` = `Mr. bear`) and fixes the config name for you |
 | `download`: no download started | a menu (resolution/format) is in the way, or the button label differs | read the visible controls in the error, `click --text "..."`, then `download --no-click`; or `snapshot` -> `videos` -> `download --video-url` |
-| `wait` returns `permission_card` | Flow asks to confirm a paid action | read the card text (cost), decide per mode (see SKILL.md), then `click --text "<confirm label>"` |
+| `wait` returns `permission_card` | Flow asks to confirm a paid action | read `cost`/`model`, decide per mode (see SKILL.md), then `approve` |
+| `wait` returns `timeout` while `job_state` is queued/generating | Flow queues jobs under high demand (minutes) | `wait --timeout 600` again; download when `videos` shows `done` |
+| `approve`: `would exceed the credit cap` | cost + used > `max_credits` | ask the user; `setup --max-credits N` or `approve --over-cap` after they agree |
+| `open` lands on flow.google.com/about, status `unknown` | not signed in, or no project yet | sign in in that window, create/open a project, `setup --detect-project` |
+| tests fail with exit 0 instead of 2 | a real Flow browser is on the port | fixed: tests use their own free port; update the repo |
 | `wait` returns `challenge`/`policy`/`credits`/`signed_out` | Flow blocked or needs the human | stop and tell the user exactly what the page says |
 | `ffmpeg failed` | bad/corrupt input, or ffmpeg missing | `probe` the file; `doctor` for ffmpeg |
 | Caption looks wrong | text too long or placement | shorten; adjust `--y`, `--font-size`; see `captions.md` |

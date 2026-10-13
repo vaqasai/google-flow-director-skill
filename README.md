@@ -29,7 +29,7 @@ These are conventions the agent follows, not hard locks: the agent can adapt, fi
 `SKILL.md` workflow · `scripts/flow.py` helper CLI · `scripts/captions.py` ffmpeg finishing · `scripts/bootstrap.*` installers · `selectors.json` Flow UI selectors (agent-editable) · `references/` script writing, captions, Windows, troubleshooting · `tests/` offline tests (`python -m unittest discover -s tests`).
 
 ## Status
-v0.2 is a rewrite for simplicity. Tested: setup/config, browser start/stop, snapshot/send/wait/attach/click/eval/download/screenshot against a mock Flow page, captions and ffmpeg on Linux, and the Linux bootstrap. **Not yet verified:** a real Flow account and the Windows bootstrap/Chrome launch on a real Windows machine (see `docs/TEST_REPORT.md`). Flow has no public API and its UI changes; selectors live in one file for that reason.
+v0.2.1. Field-tested end to end on **Windows 11 + PowerShell 5.1 with a real Flow account** (bootstrap, sign-in, Character, storyboard, 15-credit generation, captions). The fixes made after that run (permission card handling, `approve`, polling `wait`, `characters`, auto caption placement) are verified offline only; see `docs/TEST_REPORT.md`. Not yet verified: macOS, Linux with a real account. Flow has no public API and its UI changes; selectors live in one file for that reason.
 
 ## Need help with AI agents?
 For consulting, custom video workflows or AI agent builds: **[hire us at vaqasai.in](https://vaqasai.in)**.
