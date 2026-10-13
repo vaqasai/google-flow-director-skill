@@ -33,6 +33,17 @@ Attached `flow.py` to the running Flow browser without navigating or sending any
 | Queue text | "waiting in the queue due to high demand" stays in chat history; `queued` now looks at the last message only and ignores videos that existed before approval |
 | Not exercised on the real site | `send`, `approve`, `attach`, generation (spends credits; needs the owner's go-ahead) |
 
+## Multiple characters, scene references, upload (2026-10-13)
+| Item | Status |
+|---|---|
+| `attach` with several names (`mr bear, leo`), kind-aware matching | TESTED on mock page |
+| `characters --kind all` lists Character/Image/Video tiles | TESTED on the real Flow page (read-only) |
+| Attaching a Scene tile on real Flow | UNTESTED (the tile label for Scenes is not confirmed; attach falls back to searching all kinds) |
+| `upload` (file input or add-media menu) | UNTESTED on real Flow; on the mock it fails with a clear message |
+
+## Installer check (2026-10-13, Linux)
+`npx skills add vaqasai/google-flow-director-skill -a claude-code` into an empty folder copied all 16 files including `scripts/` and `references/`. The empty-folder install seen on Windows came from the agent's own installer, not from the `skills` CLI; `doctor --repair` covers it.
+
 ## Still UNTESTED
 - Windows re-run of v0.2.1 (all of the above), PowerShell 7, machines without winget, non-admin user.
 - macOS. Linux with a real Flow account (headless VNC sign-in).

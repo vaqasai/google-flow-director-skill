@@ -21,5 +21,6 @@
     "credits": "insufficient credits|out of credits|not enough credits",
     "capacity": "at capacity|try again later|failed to generate"
   },
-  "queue_patterns": "high demand|waiting in the queue|queued|in queue"
+  "queue_patterns": "high demand|waiting in the queue|queued|in queue",
+  "add_media_button": "button[aria-label=\"Add media menu\"]"
 }

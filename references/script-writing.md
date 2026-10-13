@@ -6,7 +6,8 @@ Write with the user, short and concrete. A video that works is a small story, no
 Settle with the user (ask only what is missing):
 - **Length and format**: duration and aspect (e.g. 10s, 9:16 for reels/shorts, 16:9 for YouTube). Matches `format` in the config.
 - **Premise in one sentence** with a setup, a turn and a payoff. One idea per clip.
-- **Cast**: which saved Characters appear (exact names, as saved in Flow). Do not invent characters that are not saved.
+- **Cast**: which saved Characters appear (one or several; names as saved in Flow, `flow.py characters` lists them). Do not invent characters that are not saved.
+- **References**: saved Scenes or images the user uploads for the location, props or look. Attach them with the cast so the setting stays consistent across clips.
 - **Setting and look**: where, time of day, camera style, colour/mood. Keep it identical across clips for continuity.
 - **Sound**: dialogue, music, or silent with a caption.
 

@@ -45,6 +45,7 @@ DEFAULTS = {
     "profile_dir": str(HOME / "profile"),
     "project_url": None,
     "characters": [],
+    "scenes": [],           # saved Scene / reference-image names to attach with the characters
     "format": {"width": 1080, "height": 1920, "duration": 10},
     "captions": {"enabled": True, "x": 0.5, "y": "auto", "font_size": 0.045, "max_width": 0.86,
                  "start": 0.3, "end": None, "max_lines": 3},
@@ -450,8 +451,11 @@ def cmd_setup(args, cfg):
             cfg[key] = value
             changed[key] = value
     if args.characters is not None:
-        cfg["characters"] = [c.strip() for c in args.characters.split(",") if c.strip()]
+        cfg["characters"] = _split(args.characters)
         changed["characters"] = cfg["characters"]
+    if args.scenes is not None:
+        cfg["scenes"] = _split(args.scenes)
+        changed["scenes"] = cfg["scenes"]
     for key in ("width", "height", "duration"):
         value = getattr(args, key)
         if value is not None:
@@ -487,7 +491,8 @@ def _next_steps(cfg, login):
     if not cfg.get("project_url"):
         steps.append("Ask which Flow project to use; have them open it in that window, then run `setup --detect-project`.")
     if not cfg.get("characters"):
-        steps.append("Ask for the exact names of the saved Characters to use, then `setup --characters \"A,B\"`.")
+        steps.append("Ask which saved Characters to use (one or several; `flow.py characters` lists them), then `setup --characters \"A,B\"`.")
+    steps.append("Ask if they have scene/location reference images: they can drop files in, you `upload` them; saved Scenes go in `setup --scenes \"X\"`.")
     steps.append("Confirm format/length, captions on/off, mode (ask|auto) and credit cap with the user; re-run `setup` with flags.")
     return steps
 
@@ -595,12 +600,12 @@ def cmd_new_session(args, cfg):
 
 
 def _chip_has(chips, name):
-    return any(norm_name(c.split("\n")[0]) == norm_name(name) and "Character" in c for c in chips)
+    return any(norm_name(c.split("\n")[0]) == norm_name(name) for c in chips)
 
 
 LIST_TILES_JS = """(sel) => [...document.querySelectorAll(sel)]
   .map((e, i) => ({i, l: e.innerText.split('\\n').map(x => x.trim()).filter(Boolean)}))
-  .filter(x => x.l.length > 1 && x.l[x.l.length - 1] === 'Character').map(x => ({i: x.i, name: x.l[0]}))"""
+  .filter(x => x.l.length > 1).map(x => ({i: x.i, name: x.l[0], kind: x.l[x.l.length - 1]}))"""
 
 
 def _open_add_menu(page, sel):
@@ -623,43 +628,55 @@ def _menu_tiles(page, sel, search, terms):
 
 
 def cmd_characters(args, cfg):
+    """List saved assets in the add menu: Characters by default, `--kind all` for scenes/images too."""
     sel = selectors()
     with browser_page(cfg) as page:
         search = _open_add_menu(page, sel)
         tiles = _menu_tiles(page, sel, search, [args.query or ""])
         page.keyboard.press("Escape")
-    names = [t["name"] for t in tiles]
-    return {"ok": True, "count": len(names), "characters": names, "configured": cfg.get("characters"),
-            "note": "names are shown exactly as saved; `attach` also accepts close spellings"}
+    kind = (args.kind or "character").lower()
+    shown = [t for t in tiles if kind == "all" or t["kind"].lower() == kind]
+    out = {"ok": True, "count": len(shown), "characters": [t["name"] for t in shown if t["kind"].lower() == "character"],
+           "configured": {"characters": cfg.get("characters"), "scenes": cfg.get("scenes")},
+           "note": "names are exactly as saved; `attach` also accepts close spellings"}
+    if kind != "character":
+        out["assets"] = [{"name": t["name"], "kind": t["kind"]} for t in shown]
+    return out
+
+
+def _split(text):
+    return [n.strip() for n in (text or "").split(",") if n.strip()]
 
 
 def cmd_attach(args, cfg):
+    """Attach saved Characters and Scene/reference assets to the prompt. No flags = everything in the config."""
     sel = selectors()
-    from_config = not args.names
-    names = args.names.split(",") if args.names else cfg.get("characters")
-    names = [n.strip() for n in names if n.strip()]
-    if not names:
-        raise FlowError("no Character names", "pass --names \"A,B\" or set them with `setup --characters`")
+    explicit = args.names is not None or args.scenes is not None
+    jobs = ([(n, "Character") for n in _split(args.names)] + [(n, "Scene") for n in _split(args.scenes)]) if explicit \
+        else [(n, "Character") for n in cfg.get("characters") or []] + [(n, "Scene") for n in cfg.get("scenes") or []]
+    if not jobs:
+        raise FlowError("nothing to attach", "pass --names \"A,B\" and/or --scenes \"X\", or set them with `setup --characters/--scenes`")
     results, renamed = [], {}
     with browser_page(cfg) as page:
-        for name in names:
+        for name, kind in jobs:
             chips = snapshot(page)["chips"]
             if _chip_has(chips, name):
-                results.append({"name": name, "status": "already_attached"})
+                results.append({"name": name, "kind": kind, "status": "already_attached"})
                 continue
             search = _open_add_menu(page, sel)
             words = sorted(re.findall(r"[A-Za-z0-9]+", name), key=len, reverse=True)
             tiles = _menu_tiles(page, sel, search, [name] + words[:1] + [""])
-            if not tiles:
+            pool = [t for t in tiles if t["kind"].lower() == kind.lower()] or tiles   # unknown label for scenes? search all
+            if not pool:
                 page.keyboard.press("Escape")
-                raise FlowError(f"no Character tiles visible while looking for {name!r}",
-                                "run `flow.py characters`; make sure the Character exists in this project")
+                raise FlowError(f"no tiles visible while looking for {name!r}",
+                                "run `flow.py characters --kind all`; make sure it exists in this project (uploads: see `upload`)")
             try:
-                matched, how = match_name(name, [t["name"] for t in tiles])
+                matched, how = match_name(name, [t["name"] for t in pool])
             except FlowError:
                 page.keyboard.press("Escape")
                 raise
-            tile = next(t for t in tiles if t["name"] == matched)
+            tile = next(t for t in pool if t["name"] == matched)
             page.locator(sel["add_menu_item"]).nth(tile["i"]).click()
             add = page.locator(sel["add_to_prompt_button"])
             time.sleep(0.4)
@@ -667,16 +684,52 @@ def cmd_attach(args, cfg):
                 add.first.click()
             time.sleep(0.8)
             after = snapshot(page)["chips"]
-            entry = {"name": name, "status": "attached" if len(after) > len(chips) else "uncertain", "chips": after}
+            entry = {"name": name, "kind": tile["kind"], "status": "attached" if len(after) > len(chips) else "uncertain", "chips": after}
             if how != "exact":
                 entry["matched_as"] = matched
-                renamed[name] = matched
+                renamed[(kind, name)] = matched
             results.append(entry)
-    if renamed and from_config:
-        cfg["characters"] = [renamed.get(n, n) for n in cfg["characters"]]
+    changed = {}
+    if renamed and not explicit:
+        for key, field in (("Character", "characters"), ("Scene", "scenes")):
+            fixes = {n: m for (k, n), m in renamed.items() if k == key}
+            if fixes:
+                cfg[field] = [fixes.get(n, n) for n in cfg[field]]
+                changed[field] = fixes
         save_config(cfg)
     return {"ok": all(r["status"] != "uncertain" for r in results), "results": results,
-            **({"config_updated": renamed} if renamed and from_config else {})}
+            **({"config_updated": changed} if changed else {})}
+
+
+def cmd_upload(args, cfg):
+    """Upload local reference images (a scene, a location, a prop) into the Flow project."""
+    sel = selectors()
+    files = [Path(f).expanduser().resolve() for f in args.files]
+    missing = [str(f) for f in files if not f.is_file()]
+    if missing:
+        raise FlowError(f"file not found: {missing}", "check the paths the user gave you")
+    with browser_page(cfg) as page:
+        inputs = page.locator("input[type=file]")
+        if inputs.count():
+            inputs.first.set_input_files([str(f) for f in files])
+        else:
+            try:
+                click_selector(page, sel["add_media_button"])
+                with page.expect_file_chooser(timeout=8000) as chooser:
+                    item = page.get_by_role("menuitem", name=re.compile("upload", re.I))
+                    (item if item.count() else page.get_by_text(re.compile("upload", re.I))).first.click()
+                chooser.value.set_files([str(f) for f in files])
+            except FlowError:
+                raise
+            except Exception as error:
+                menu = page.evaluate(INSPECT_JS)[:50]
+                raise FlowError(f"could not start an upload ({type(error).__name__})",
+                                "open the add-media menu with `click`, find the upload entry with `inspect`, or ask the user to drag the file in "
+                                f"(VNC). Visible controls: {json.dumps(menu)[:1200]}")
+        time.sleep(args.wait)
+        return {"ok": True, "uploaded": [f.name for f in files],
+                "next": "uploads can take a moment and arrive unnamed: `characters --kind all` to see tiles, then `attach --scenes \"name\"`, "
+                        "or just tell Flow's agent to use the uploaded image as the scene reference"}
 
 
 def cmd_send(args, cfg):
@@ -917,7 +970,8 @@ def build_parser():
 
     s = sub.add_parser("setup", help="save settings, open the Flow browser, report what is still needed (safe to re-run)")
     s.add_argument("--project-url"); s.add_argument("--detect-project", action="store_true")
-    s.add_argument("--characters", help="comma-separated exact saved Character names")
+    s.add_argument("--characters", help="comma-separated saved Character names (spelling need not be exact)")
+    s.add_argument("--scenes", help="comma-separated saved Scene / reference asset names")
     s.add_argument("--width", type=int); s.add_argument("--height", type=int); s.add_argument("--duration", type=float)
     s.add_argument("--captions", choices=["on", "off"]); s.add_argument("--mode", choices=["ask", "auto"])
     s.add_argument("--max-credits", type=int); s.add_argument("--output-dir"); s.add_argument("--chrome-path")
@@ -932,8 +986,12 @@ def build_parser():
     sub.add_parser("snapshot", help="current Flow page state as JSON (chat, composer, permission card, videos)").set_defaults(fn=cmd_snapshot)
     s = sub.add_parser("inspect", help="list visible buttons/inputs so you can adapt selectors"); s.add_argument("--filter"); s.set_defaults(fn=cmd_inspect)
     sub.add_parser("new-session", help="start a fresh Flow agent session").set_defaults(fn=cmd_new_session)
-    s = sub.add_parser("characters", help="list the saved Character names exactly as Flow shows them"); s.add_argument("--query"); s.set_defaults(fn=cmd_characters)
-    s = sub.add_parser("attach", help="attach saved Characters (case/punctuation/spelling tolerant)"); s.add_argument("--names"); s.set_defaults(fn=cmd_attach)
+    s = sub.add_parser("characters", help="list saved Characters as Flow shows them (--kind scene|image|all for other assets)")
+    s.add_argument("--query"); s.add_argument("--kind", help="character (default), scene, image, all"); s.set_defaults(fn=cmd_characters)
+    s = sub.add_parser("attach", help="attach saved Characters and Scenes (several allowed; case/punctuation/spelling tolerant). No flags = all in config")
+    s.add_argument("--names", help="Character names, comma separated"); s.add_argument("--scenes", help="Scene/reference names, comma separated"); s.set_defaults(fn=cmd_attach)
+    s = sub.add_parser("upload", help="upload local reference images (scene, location, prop) into the Flow project")
+    s.add_argument("files", nargs="+"); s.add_argument("--wait", type=float, default=4); s.set_defaults(fn=cmd_upload)
     s = sub.add_parser("send", help="type a message into the Flow agent composer and send it")
     s.add_argument("message", nargs="?"); s.add_argument("--file", help="UTF-8 file, or - for stdin"); s.add_argument("--replace", action="store_true")
     s.add_argument("--slow", action="store_true"); s.add_argument("--no-submit", action="store_true")
