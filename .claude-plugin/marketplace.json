@@ -1,0 +1,14 @@
+{
+  "name": "vaqasai-marketplace",
+  "description": "Agent skills by Vaqas AI",
+  "owner": {
+    "name": "Vaqas AI"
+  },
+  "plugins": [
+    {
+      "name": "google-flow-director",
+      "source": "./",
+      "description": "Make short videos with Google Flow end to end - script, characters, captions."
+    }
+  ]
+}

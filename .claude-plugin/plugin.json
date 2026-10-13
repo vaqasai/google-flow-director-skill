@@ -1,0 +1,14 @@
+{
+  "name": "google-flow-director",
+  "displayName": "Google Flow Director",
+  "version": "0.2.1",
+  "description": "Make short videos with Google Flow end to end - script, characters and scene references, captions. Works on Windows, Linux and macOS with any agent that can run shell commands.",
+  "author": {
+    "name": "Vaqas AI",
+    "url": "https://vaqasai.in"
+  },
+  "homepage": "https://github.com/vaqasai/google-flow-director-skill",
+  "repository": "https://github.com/vaqasai/google-flow-director-skill",
+  "license": "MIT",
+  "keywords": ["agent-skill", "claude-code", "codex", "google-flow", "ai-video", "video-generation"]
+}

@@ -74,6 +74,10 @@ You never hand over a password. You sign in to Google once, in a browser window 
 ```bash
 npx skills add vaqasai/google-flow-director-skill
 ```
+Or inside Claude Code (v2.1.275+):
+```
+/plugin install google-flow-director --marketplace vaqasai/google-flow-director-skill
+```
 Or copy the folder yourself into your agent's skills folder:
 
 | Agent | Folder |
