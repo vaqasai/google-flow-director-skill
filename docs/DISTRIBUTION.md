@@ -13,9 +13,18 @@ What is known, and what is not. Re-check each before relying on it.
 - Set a repo description and topics, e.g. `agent-skill`, `claude-code`, `google-flow`, `ai-video`, `video-generation`, `codex`, `hermes-agent`, `playwright`.
 - Create a release `v0.2.1` with a short changelog and, if wanted, a social preview image.
 
-## Other places (unverified, check each one's current rules)
-- **Claude Code plugin marketplace**: add `.claude-plugin/marketplace.json` (the `skills` CLI also reads this format) so people can add the repo as a marketplace. Not added yet.
-- **"Awesome" lists** for agent skills / Claude Code skills / Hermes skills: open a PR adding one line with a link.
+## Status (2026-10-13)
+
+- **skills.sh**: LIVE at https://skills.sh/vaqasai/google-flow-director-skill (1 skill, installs start at 0; ranking follows install telemetry).
+- **GitHub**: public, description + topics set, release `v0.2.1` cut.
+- **Claude Code marketplace**: DONE. `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` added, `claude plugin validate` passes, and a live `marketplace add` + `plugin install google-flow-director@vaqasai-marketplace` (v0.2.1) was verified. Users install with:
+  `/plugin install google-flow-director --marketplace vaqasai/google-flow-director-skill`
+- **ComposioHQ/awesome-claude-skills**: PR open → https://github.com/ComposioHQ/awesome-claude-skills/pull/2207 (one line in Creative & Media).
+- **ClawHub**: package validated (`skill publish --dry-run` → `would-publish`), but publishing needs an interactive login. Run:
+  `npx -y clawhub@latest login` then
+  `npx -y clawhub@latest skill publish <a folder WITHOUT .claude-plugin> --slug google-flow-director --version 0.2.1 --source-repo vaqasai/google-flow-director-skill`
+  (The repo root classifies as a plugin because of `.claude-plugin/`; publish the skill files `SKILL.md README.md LICENSE selectors.json scripts references` as the skill folder.)
+- **Gated (do after traction)**: travisvn/awesome-claude-skills needs 10+ GitHub stars (auto-close below that; currently 1) and human-submitted PRs; VoltAgent/awesome-agent-skills rejects brand-new skills without community usage.
 - **Hermes**: the CLI recognises `.hermes/skills`; copying the folder into `~/.hermes/skills/` works today.
 - **Communities**: a short demo clip plus the one-line install command is the best launch post (X, Reddit r/ClaudeAI, r/LocalLLaMA-style agent forums, Discord servers for the agents you support). Show a real result, not a promise.
 
